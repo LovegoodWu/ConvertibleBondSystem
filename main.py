@@ -104,7 +104,7 @@ def main():
     # 输出结果
     if not alert_df.empty:
         full_path = os.path.join(ALERT_FILE_PATH, ALERT_FILE_NAME)
-        alert_df.to_csv(full_path, index=False, encoding="GBK")
+        alert_df.to_csv(full_path, index=False, encoding="utf-8")
         print(f"生成提醒文件：{ALERT_FILE_NAME}")
 
         # 发送提醒邮件
