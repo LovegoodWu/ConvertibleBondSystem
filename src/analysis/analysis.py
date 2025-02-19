@@ -1,3 +1,5 @@
+from os.path import abspath, dirname
+
 import pandas as pd
 import akshare as ak
 from datetime import datetime
@@ -5,16 +7,14 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
-from IPython.display import display
 from dotenv import load_dotenv
 import os
 
 # 配置参数
-EXCEL_PATH = "strategy/20250216.xlsx"  # 替换为你的Excel路径
-ALERT_FILE_PATH = "./alert"
+PROJECT_ROOT_PATH = dirname(dirname(dirname(abspath(__file__))))
+EXCEL_PATH = os.path.join(PROJECT_ROOT_PATH, "data/strategy/20250216.xlsx")
+ALERT_FILE_DIRECTORY = os.path.join(PROJECT_ROOT_PATH, "data/alert")
 ALERT_FILE_NAME = "买入提醒_{}.csv".format(datetime.today().strftime("%Y%m%d"))
-NEED_SEND_MAIL = False  # 是否需要发送邮件提醒
-
 load_dotenv()  # 加载.env文件
 
 
@@ -91,7 +91,7 @@ def generate_alert(strategy_df, price_df):
     return pd.DataFrame(alert_conditions)
 
 
-def main():
+def do_analysis(need_send_mail=True):
     # 加载策略
     strategy_df = load_strategy()
 
@@ -103,12 +103,12 @@ def main():
 
     # 输出结果
     if not alert_df.empty:
-        full_path = os.path.join(ALERT_FILE_PATH, ALERT_FILE_NAME)
+        full_path = os.path.join(ALERT_FILE_DIRECTORY, ALERT_FILE_NAME)
         alert_df.to_csv(full_path, index=False, encoding="utf-8")
         print(f"生成提醒文件：{ALERT_FILE_NAME}")
 
-        # 发送提醒邮件
-        send_alert_email(alert_df, full_path)
+        if need_send_mail:
+            send_alert_email(alert_df, full_path)
     else:
         print("今日无符合条件的买入信号")
 
@@ -123,9 +123,6 @@ def validate_strategy(df):
 
 
 def send_alert_email(alert_df, full_file_path):
-    if not NEED_SEND_MAIL:
-        return
-
     """发送邮件提醒"""
     # 邮件配置（支持多个服务商）
     email_config = {
@@ -204,7 +201,3 @@ def send_alert_email(alert_df, full_file_path):
         print("邮件发送成功")
     except Exception as e:
         print(f"邮件发送失败: {str(e)}")
-
-
-if __name__ == "__main__":
-    main()

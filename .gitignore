@@ -170,5 +170,5 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-alert
-strategy
+data/alert
+data/strategy
