@@ -12,7 +12,7 @@ import os
 
 # 配置参数
 PROJECT_ROOT_PATH = dirname(dirname(dirname(abspath(__file__))))
-EXCEL_PATH = os.path.join(PROJECT_ROOT_PATH, "data/strategy/20250216.xlsx")
+EXCEL_PATH = os.path.join(PROJECT_ROOT_PATH, "data/strategy/20250323.xlsx")
 ALERT_FILE_DIRECTORY = os.path.join(PROJECT_ROOT_PATH, "data/alert")
 ALERT_FILE_NAME = "买入提醒_{}.csv".format(datetime.today().strftime("%Y%m%d"))
 load_dotenv()  # 加载.env文件
@@ -68,6 +68,9 @@ def generate_alert(strategy_df, price_df):
     alert_conditions = []
     for _, row in merged_df.iterrows():
         current_price = row["最新价"]
+        if current_price == 0:
+            continue
+
         alerts = []
 
         if current_price <= row["重仓线"]:
