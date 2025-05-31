@@ -7,6 +7,7 @@ import akshare as ak
 
 PROJECT_ROOT_PATH = dirname(dirname(dirname(abspath(__file__))))
 HISTORY_FILE_DIRECTORY = os.path.join(PROJECT_ROOT_PATH, "data/history")
+HISTORY_FILE_PATH = os.path.join(HISTORY_FILE_DIRECTORY, "history_akshare.csv")
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.max_rows', None)
@@ -15,6 +16,7 @@ pd.set_option('display.width', 1000)  # 调整控制台显示宽度
 
 def download_bond_data(to_file_path):
     data_list = []
+    # 获取所有可转债
     c_bond_df = ak.bond_zh_cov()
 
     # 测试时可以先只获取部分数据
@@ -92,4 +94,4 @@ def check_df(df, do_clean):
         print("数据清洗后总行数：{}".format(len(df)))
 
 
-download_bond_data(os.path.join(HISTORY_FILE_DIRECTORY, "history_akshare.csv"))
+download_bond_data(os.path.join(HISTORY_FILE_PATH, "history_akshare.csv"))
