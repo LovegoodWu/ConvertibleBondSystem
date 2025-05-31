@@ -12,7 +12,7 @@ import os
 
 # 配置参数
 PROJECT_ROOT_PATH = dirname(dirname(dirname(abspath(__file__))))
-EXCEL_PATH = os.path.join(PROJECT_ROOT_PATH, "data/strategy/20250323.xlsx")
+EXCEL_PATH = os.path.join(PROJECT_ROOT_PATH, "data/strategy/20250518.xlsx")
 ALERT_FILE_DIRECTORY = os.path.join(PROJECT_ROOT_PATH, "data/alert")
 ALERT_FILE_NAME = "买入提醒_{}.csv".format(datetime.today().strftime("%Y%m%d"))
 load_dotenv()  # 加载.env文件
@@ -22,9 +22,9 @@ def load_strategy():
     """读取策略Excel文件"""
     df = pd.read_excel(
         EXCEL_PATH,
-        usecols="B,AE,AF,AG",
+        usecols="B,AE,AF,AG,BD",
         header=0,
-        names=["代码", "建仓线", "加仓线", "重仓线"],
+        names=["代码", "建仓线", "加仓线", "重仓线", "正股简评"],
         skiprows=2,  # 跳过前两行
         skipfooter=14,  # 跳过最后两行
     )
@@ -53,7 +53,16 @@ def get_real_time_data():
     spot_df["最新价"] = pd.to_numeric(spot_df["最新价"], errors='coerce').fillna(100000).round(3)
     spot_df["债券代码"] = spot_df["债券代码"].astype(str).str[2:].str.zfill(6)
 
-    return spot_df[["债券代码", "债券名称", "最新价"]]
+    cb_df = ak.bond_zh_cov()
+    # 将spot_df left join cb_df，用债券代码这一列作为join条件，将cb_df的转股溢价率这一列添加到spot_df中
+    spot_df = pd.merge(
+        spot_df,
+        cb_df[["债券代码", "转股溢价率", "信用评级"]],
+        on="债券代码",
+        how="left"
+    )
+
+    return spot_df[["债券代码", "债券名称", "最新价", "转股溢价率", "信用评级"]]
 
 
 def generate_alert(strategy_df, price_df):
@@ -80,17 +89,25 @@ def generate_alert(strategy_df, price_df):
         elif current_price <= row["建仓线"]:
             alerts.append(f"建仓触发（当前价{current_price} ≤ 建仓线{row['建仓线']}）")
 
+        diff = row["建仓线"] - current_price
+        diff = f"{diff:.1f}"
+
         if alerts:
             alert_conditions.append({
                 "债券代码": row["债券代码"],
                 "债券名称": row["债券名称"],
+                "价格差": diff,
                 "当前价格": current_price,
+                "转股溢价率": f"{row['转股溢价率']:.2f}%",
+                "信用评级": row["信用评级"],
                 "提醒详情": "；".join(alerts),
                 "建仓线": row["建仓线"],
                 "加仓线": row["加仓线"],
-                "重仓线": row["重仓线"]
+                "重仓线": row["重仓线"],
+                "简评": row['正股简评']
             })
 
+    alert_conditions = sorted(alert_conditions, key=lambda x: float(x["价格差"]), reverse=True)
     return pd.DataFrame(alert_conditions)
 
 
@@ -107,7 +124,7 @@ def do_analysis(need_send_mail=True):
     # 输出结果
     if not alert_df.empty:
         full_path = os.path.join(ALERT_FILE_DIRECTORY, ALERT_FILE_NAME)
-        alert_df.to_csv(full_path, index=False, encoding="utf-8")
+        alert_df.to_csv(full_path, index=False, encoding="utf-8", sep='\t')
         print(f"生成提醒文件：{ALERT_FILE_NAME}")
 
         if need_send_mail:
